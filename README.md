@@ -74,9 +74,28 @@ OptiIrrig/
 ├── README.md
 └── package.json
 ```
+##  Démarrer le projet
+
+### Prérequis
+- Node.js v18+ → https://nodejs.org
+- Git → https://git-scm.com
+
+### Installation
+
+# 1. Cloner le dépôt
+git clone https://github.com/MonyaOubella/OptiIrrig.git
+cd OptiIrrig
+
+# 2. Installer les dépendances
+npm install
+
+# 3. Lancer le projet
+npm run dev
+
+# 4. Ouvrir dans le navigateur
+http://localhost:5173
 
 ---
 
 
-## 📄 Licence
-MIT — Projet académique
+
