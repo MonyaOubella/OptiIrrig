@@ -1,0 +1,35 @@
+{
+  "feature_columns": [
+    "line",
+    "soil_conductivity_us_cm",
+    "soil_moisture_pct",
+    "soil_temperature_c",
+    "air_co2_ppm",
+    "air_humidity_pct",
+    "pressure_hpa",
+    "air_temperature_c",
+    "gdd",
+    "standard_day_degree",
+    "daily_mean_temperature",
+    "daily_max_above_tbase",
+    "daily_max_temperature",
+    "daily_max_reduction",
+    "ontario_units",
+    "hour",
+    "day_of_week",
+    "month",
+    "is_weekend",
+    "soil_moisture_change_30min",
+    "air_temperature_change_30min"
+  ],
+  "classification_accuracy": 0.9984,
+  "regression_mae_liters": 13900.7725,
+  "regression_rmse_liters": 33581.5175,
+  "liters_per_minute": 4600.0,
+  "train_rows": 25731,
+  "test_rows": 6433,
+  "target_definition": {
+    "irrigate_now": "1 if the next hour of cumulative applied water is at least 10 liters for the same irrigation line",
+    "future_water_liters_1h": "Sum of positive water meter increments over the next six 10-minute steps"
+  }
+}

@@ -29,8 +29,8 @@ d'IA prédictif.
 | Nom | Filière | Rôle |
 |-----|---------|------|
 Monya OUBELLA -> Génie Logiciel | Architecture, Prototype, Design |
-Soufiane TIDRARINI -> Systèmes Embarqués | Capteurs, ESP32, LoRaWAN |
-Abdelouahd ID-BOUBRIK -> IA & Data | Modèle prédictif, Détection fuites |
+Soufiane TIDRARINI -> IA & Data | Modèle prédictif, Détection fuites |
+Abdelouahd ID-BOUBRIK -> Systèmes Embarqués | Capteurs, ESP32, LoRaWAN |
 
 ---
 

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MetricCard } from "../components/MetricCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Droplet, Activity, Gauge, Power, MapPin, Lightbulb, Clock } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+const AI_API_URL = import.meta.env.VITE_AI_API_URL ?? "http://127.0.0.1:8001";
 
 const waterConsumptionData = [
   { day: "Lun", consumption: 320 },
@@ -21,10 +23,21 @@ interface Action {
   time: string;
 }
 
+interface AiRecommendation {
+  irrigate: boolean;
+  confidence: number;
+  recommended_liters: number;
+  recommended_duration_min: number;
+  reason: string;
+}
+
 export function Dashboard() {
   const [pumpActive, setPumpActive] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<"open" | "close" | null>(null);
+  const [aiRecommendation, setAiRecommendation] = useState<AiRecommendation | null>(null);
+  const [aiLoading, setAiLoading] = useState(true);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [actions, setActions] = useState<Action[]>([
     { id: 5, action: "Pompe fermée manuellement", time: "14:30" },
     { id: 4, action: "Pompe ouverte (programmée)", time: "06:00" },
@@ -37,6 +50,53 @@ export function Dashboard() {
     setPendingAction(action);
     setShowConfirm(true);
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadRecommendation() {
+      try {
+        setAiLoading(true);
+        setAiError(null);
+
+        const response = await fetch(`${AI_API_URL}/predict`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+         body: JSON.stringify({
+            soil_moisture_pct: 30,
+            air_temperature_c: 15,
+            air_humidity_pct: 55,
+            pressure_hpa: 1013,
+            line: 1,
+            hour: 9,
+            day_of_week: 1,
+            month: 5,
+          }),
+
+        });
+
+        if (!response.ok) {
+          throw new Error("Impossible de recuperer la recommandation IA.");
+        }
+
+        const data: AiRecommendation = await response.json();
+        setAiRecommendation(data);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setAiError(error instanceof Error ? error.message : "Une erreur est survenue.");
+      } finally {
+        setAiLoading(false);
+      }
+    }
+
+    loadRecommendation();
+
+    return () => controller.abort();
+  }, []);
 
   const confirmPumpAction = () => {
     if (pendingAction === "open") {
@@ -58,6 +118,10 @@ export function Dashboard() {
     }
     setPendingAction(null);
   };
+
+  const roundedDuration = aiRecommendation ? Math.max(1, Math.round(aiRecommendation.recommended_duration_min)) : null;
+  const roundedLiters = aiRecommendation ? Math.max(0, Math.round(aiRecommendation.recommended_liters)) : null;
+  const confidencePercent = aiRecommendation ? Math.round(aiRecommendation.confidence * 100) : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -113,19 +177,43 @@ export function Dashboard() {
         <div className="bg-gradient-to-br from-[#1D9E75] to-[#178764] rounded-lg p-6 text-white">
           <div className="flex items-start gap-3 mb-4">
             <Lightbulb className="w-6 h-6 flex-shrink-0 mt-1" />
-            <div>
+            <div className="w-full">
               <h3 className="font-semibold text-lg mb-2">Recommandation IA</h3>
-              <p className="text-sm opacity-90">
-                Irriguer demain à <strong>6h00</strong>
-              </p>
-              <p className="text-2xl font-semibold mt-2">45 minutes</p>
-              <p className="text-sm opacity-90">recommandées</p>
+              {aiLoading && (
+                <>
+                  <p className="text-sm opacity-90">Analyse des donnees capteurs en cours...</p>
+                  <p className="text-2xl font-semibold mt-2">Chargement...</p>
+                  <p className="text-sm opacity-90">prediction en preparation</p>
+                </>
+              )}
+              {!aiLoading && aiError && (
+                <>
+                  <p className="text-sm opacity-90">Connexion a l'API IA impossible</p>
+                  <p className="text-xl font-semibold mt-2">Service indisponible</p>
+                  <p className="text-sm opacity-90">{aiError}</p>
+                </>
+              )}
+              {!aiLoading && !aiError && aiRecommendation && (
+                <>
+                  <p className="text-sm opacity-90">
+                    {aiRecommendation.irrigate ? "Irrigation recommandee maintenant" : "Pas d'irrigation immediate"}
+                  </p>
+                  <p className="text-2xl font-semibold mt-2">{roundedDuration} minutes</p>
+                  <p className="text-sm opacity-90">{roundedLiters} litres recommandes</p>
+                </>
+              )}
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-white/20">
-            <p className="text-xs opacity-75">
-              Basé sur : prévisions météo, humidité actuelle, historique de consommation
-            </p>
+          <div className="mt-4 pt-4 border-t border-white/20 space-y-2">
+            {!aiLoading && !aiError && aiRecommendation && (
+              <>
+                <p className="text-xs opacity-90">Confiance: {confidencePercent}%</p>
+                <p className="text-xs opacity-75">Raison: {aiRecommendation.reason}</p>
+              </>
+            )}
+            {!aiLoading && aiError && (
+              <p className="text-xs opacity-75">Lance l'API FastAPI pour afficher la recommandation en direct.</p>
+            )}
           </div>
         </div>
       </div>
