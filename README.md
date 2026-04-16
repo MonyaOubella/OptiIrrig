@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="docs/architecture/architecture-globale.png" alt="OptiIrrig Architecture" height="200" />
 
   # 💧 OptiIrrig: Intelligent Irrigation System
   
