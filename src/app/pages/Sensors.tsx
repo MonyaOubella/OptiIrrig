@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, Activity } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
+import { useData } from "../contexts/DataContext";
+import { useMqtt } from "../contexts/MqttContext";
 
 interface Sensor {
   id: string;
+  farmId: number;
   type: string;
   location: string;
   value: string;
@@ -11,76 +14,59 @@ interface Sensor {
   lastUpdate: string;
 }
 
-const sensorsData: Sensor[] = [
-  {
-    id: "#1",
-    type: "Humidité du sol",
-    location: "Secteur A - Nord",
-    value: "68%",
-    status: "active",
-    lastUpdate: "Il y a 2 min",
-  },
-  {
-    id: "#2",
-    type: "Débit d'eau",
-    location: "Conduite principale",
-    value: "4.2 L/min",
-    status: "active",
-    lastUpdate: "Il y a 1 min",
-  },
-  {
-    id: "#3",
-    type: "Humidité du sol",
-    location: "Secteur B - Est",
-    value: "45%",
-    status: "warning",
-    lastUpdate: "Il y a 3 min",
-  },
-  {
-    id: "#4",
-    type: "Pression",
-    location: "Pompe principale",
-    value: "2.1 bar",
-    status: "active",
-    lastUpdate: "Il y a 1 min",
-  },
-  {
-    id: "#5",
-    type: "Température",
-    location: "Secteur C - Sud",
-    value: "28°C",
-    status: "active",
-    lastUpdate: "Il y a 5 min",
-  },
-  {
-    id: "#6",
-    type: "Humidité du sol",
-    location: "Secteur A - Sud",
-    value: "72%",
-    status: "active",
-    lastUpdate: "Il y a 2 min",
-  },
-  {
-    id: "#7",
-    type: "Débit d'eau",
-    location: "Secteur B",
-    value: "0 L/min",
-    status: "inactive",
-    lastUpdate: "Il y a 3h",
-  },
-  {
-    id: "#8",
-    type: "Pression",
-    location: "Zone secondaire",
-    value: "1.8 bar",
-    status: "active",
-    lastUpdate: "Il y a 4 min",
-  },
-];
-
 export function Sensors() {
+  const { farmsData } = useData();
+  const { sensorData } = useMqtt();
   const [selectedType, setSelectedType] = useState<string>("all");
-  const [sensors] = useState<Sensor[]>(sensorsData);
+
+  const sensors: Sensor[] = farmsData.flatMap((farm) => {
+    const isOffline = farm.status === "offline";
+    const statusVal = farm.status === "alert" ? "warning" : isOffline ? "inactive" : "active";
+    const updateTime = isOffline ? "Déconnecté" : "À l'instant";
+
+    const baseSensor = {
+      id: `#${farm.id}-H`,
+      farmId: farm.id,
+      type: "Humidité du sol",
+      location: farm.name + " (M)",
+      value: farm.liveMoisture ? `${Math.round(farm.liveMoisture)}%` : "N/A",
+      status: statusVal as "warning"|"inactive"|"active",
+      lastUpdate: updateTime,
+    };
+
+    if (farm.id === 1) {
+      // Primary Node injects Temp & Pressure
+      return [
+        baseSensor,
+        {
+          id: `#${farm.id}-T`,
+          farmId: farm.id,
+          type: "Température",
+          location: farm.name + " (T)",
+          value: farm.liveTemperature ? `${Math.round(farm.liveTemperature)}°C` : "N/A",
+          status: statusVal,
+          lastUpdate: updateTime,
+        },
+        {
+          id: `#${farm.id}-P`,
+          farmId: farm.id,
+          type: "Pression",
+          location: "Pompe Principale",
+          value: `${sensorData.pressure.toFixed(1)} bar`,
+          status: statusVal,
+          lastUpdate: updateTime,
+        }
+      ];
+    }
+    return [baseSensor];
+  });
+  
+  // Sort to ensure Primary Node (Ben Ahmed, id 1) is at the top
+  sensors.sort((a, b) => {
+    if (a.farmId === 1) return -1;
+    if (b.farmId === 1) return 1;
+    return 0;
+  });
 
   const sensorTypes = ["all", ...Array.from(new Set(sensors.map((s) => s.type)))];
 
@@ -161,11 +147,20 @@ export function Sensors() {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {filteredSensors.map((sensor) => (
-              <tr key={sensor.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={sensor.id} className={`${sensor.farmId === 1 ? 'bg-[#f0f9f6]' : ''} hover:bg-gray-50 transition-colors`}>
                 <td className="px-6 py-4">
                   <span className="font-semibold text-gray-900">{sensor.id}</span>
                 </td>
-                <td className="px-6 py-4 text-gray-700">{sensor.type}</td>
+                <td className="px-6 py-4 text-gray-700">
+                  <div className="flex items-center gap-2">
+                    {sensor.type} 
+                    {sensor.farmId === 1 && (
+                      <span className="inline-flex items-center gap-1 bg-[#1D9E75] text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                        <Activity className="w-3 h-3 animate-pulse" /> Live
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-6 py-4 text-gray-700">{sensor.location}</td>
                 <td className="px-6 py-4">
                   <span className="font-semibold text-gray-900">{sensor.value}</span>

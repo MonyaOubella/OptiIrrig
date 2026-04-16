@@ -1,84 +1,10 @@
 import { useState } from "react";
 import { MapPin, AlertTriangle, CheckCircle, WifiOff, Droplet } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
-
-interface Farm {
-  id: number;
-  name: string;
-  owner: string;
-  location: { x: number; y: number };
-  status: "alert" | "normal" | "offline";
-  consumption: number;
-  alerts: number;
-}
-
-const farmsData: Farm[] = [
-  {
-    id: 1,
-    name: "Exploitation Ben Ahmed",
-    owner: "Ahmed Bennani",
-    location: { x: 20, y: 30 },
-    status: "alert",
-    consumption: 8500,
-    alerts: 2,
-  },
-  {
-    id: 2,
-    name: "Ferme Al-Baraka",
-    owner: "Fatima El Alaoui",
-    location: { x: 60, y: 40 },
-    status: "normal",
-    consumption: 7200,
-    alerts: 0,
-  },
-  {
-    id: 3,
-    name: "Domaine Souss Vert",
-    owner: "Hassan Idrissi",
-    location: { x: 35, y: 60 },
-    status: "normal",
-    consumption: 9100,
-    alerts: 0,
-  },
-  {
-    id: 4,
-    name: "Ferme Massa Agricole",
-    owner: "Karim Bensouda",
-    location: { x: 70, y: 25 },
-    status: "offline",
-    consumption: 0,
-    alerts: 0,
-  },
-  {
-    id: 5,
-    name: "Exploitation Taroudant",
-    owner: "Nadia Alami",
-    location: { x: 45, y: 80 },
-    status: "normal",
-    consumption: 6800,
-    alerts: 0,
-  },
-  {
-    id: 6,
-    name: "Ferme Agadir Bio",
-    owner: "Omar Tazi",
-    location: { x: 80, y: 70 },
-    status: "alert",
-    consumption: 10200,
-    alerts: 1,
-  },
-  {
-    id: 7,
-    name: "Domaine Tiznit",
-    owner: "Zineb Chakir",
-    location: { x: 15, y: 75 },
-    status: "normal",
-    consumption: 7900,
-    alerts: 0,
-  },
-];
+import { useData } from "../contexts/DataContext";
 
 export function Cooperative() {
+  const { farmsData } = useData();
   const [filter, setFilter] = useState<"all" | "alert" | "normal" | "offline">("all");
 
   const filteredFarms = filter === "all" ? farmsData : farmsData.filter((f) => f.status === filter);

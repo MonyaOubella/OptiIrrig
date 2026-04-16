@@ -2,68 +2,24 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { AlertTriangle, MapPin, Power, CheckCircle, Clock } from "lucide-react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-
-interface Alert {
-  id: number;
-  type: "leak" | "pressure" | "sensor";
-  severity: "high" | "medium" | "low";
-  message: string;
-  location: string;
-  time: string;
-  resolved: boolean;
-}
+import { useData } from "../contexts/DataContext";
 
 export function Alerts() {
+  const { alerts, resolveAlert } = useData();
   const [showStopPump, setShowStopPump] = useState(false);
   const [showResolve, setShowResolve] = useState(false);
-  const [alerts, setAlerts] = useState<Alert[]>([
-    {
-      id: 1,
-      type: "leak",
-      severity: "high",
-      message: "Fuite détectée — Secteur B, capteur #3",
-      location: "Secteur B",
-      time: "Il y a 5 minutes",
-      resolved: false,
-    },
-    {
-      id: 2,
-      type: "pressure",
-      severity: "medium",
-      message: "Pression anormalement élevée détectée",
-      location: "Zone principale",
-      time: "Il y a 1 heure",
-      resolved: false,
-    },
-    {
-      id: 3,
-      type: "sensor",
-      severity: "low",
-      message: "Capteur #7 hors ligne",
-      location: "Secteur C",
-      time: "Il y a 3 heures",
-      resolved: false,
-    },
-    {
-      id: 4,
-      type: "leak",
-      severity: "high",
-      message: "Fuite résolue — Secteur A",
-      location: "Secteur A",
-      time: "Hier 14:30",
-      resolved: true,
-    },
-  ]);
 
   const handleStopPump = () => {
     console.log("Pompe arrêtée");
   };
 
-  const handleResolveAlert = () => {
-    setAlerts(alerts.map((alert) => (alert.id === 1 ? { ...alert, resolved: true } : alert)));
-  };
+  const activeAlert = alerts.find((a) => !a.resolved);
 
-  const activeAlert = alerts.find((a) => a.id === 1 && !a.resolved);
+  const handleResolveAlert = () => {
+    if (activeAlert) {
+      resolveAlert(activeAlert.id);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -144,7 +100,7 @@ export function Alerts() {
               className="absolute bottom-16 left-32 flex items-center gap-2 bg-[#E24B4A] text-white px-3 py-2 rounded-lg"
             >
               <AlertTriangle className="w-4 h-4" />
-              <span className="text-sm font-medium">Capteur #3 - FUITE</span>
+              <span className="text-sm font-medium">Capteur #3 - {activeAlert && activeAlert.message.includes("Humidité") ? "SEC" : "FUITE"}</span>
             </motion.div>
 
             <div className="absolute bottom-20 right-24 flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md">
@@ -236,6 +192,9 @@ export function Alerts() {
             );
           })}
         </div>
+        {alerts.length === 0 && (
+          <p className="text-gray-500 italic mt-4">Aucun historique d'alerte récent.</p>
+        )}
       </div>
 
       <ConfirmDialog

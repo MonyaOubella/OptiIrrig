@@ -1,4 +1,4 @@
-knolleary/PubSubClient @ ^2.8
 bblanchon/ArduinoJson @ ^7.0.4
-adafruit/Adafruit Unified Sensor
 adafruit/DHT sensor library @ ^1.4.7
+knolleary/PubSubClient @ ^2.8
+adafruit/Adafruit Unified Sensor

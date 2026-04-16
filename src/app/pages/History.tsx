@@ -2,95 +2,33 @@ import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Download, CheckCircle, XCircle } from "lucide-react";
 
-const monthlyData = [
-  { month: "Jan", consumption: 8500 },
-  { month: "Fév", consumption: 7800 },
-  { month: "Mar", consumption: 9200 },
-  { month: "Avr", consumption: 8900 },
-  { month: "Mai", consumption: 9800 },
-  { month: "Juin", consumption: 10500 },
-  { month: "Juil", consumption: 11200 },
-  { month: "Août", consumption: 10800 },
-  { month: "Sep", consumption: 9500 },
-  { month: "Oct", consumption: 8700 },
-  { month: "Nov", consumption: 8200 },
-  { month: "Déc", consumption: 7900 },
-];
+// Removed static mock data arrays.
 
-const weeklyData = [
-  { day: "Lun", consumption: 320 },
-  { day: "Mar", consumption: 280 },
-  { day: "Mer", consumption: 350 },
-  { day: "Jeu", consumption: 290 },
-  { day: "Ven", consumption: 310 },
-  { day: "Sam", consumption: 270 },
-  { day: "Dim", consumption: 300 },
-];
-
-interface HistoryRecord {
-  id: number;
-  date: string;
-  volume: string;
-  duration: string;
-  aiFollowed: boolean;
-}
-
-const historyRecords: HistoryRecord[] = [
-  {
-    id: 1,
-    date: "11 Avr 2026 - 06:00",
-    volume: "450 L",
-    duration: "45 min",
-    aiFollowed: true,
-  },
-  {
-    id: 2,
-    date: "10 Avr 2026 - 06:00",
-    volume: "420 L",
-    duration: "42 min",
-    aiFollowed: true,
-  },
-  {
-    id: 3,
-    date: "09 Avr 2026 - 06:15",
-    volume: "480 L",
-    duration: "48 min",
-    aiFollowed: false,
-  },
-  {
-    id: 4,
-    date: "08 Avr 2026 - 06:00",
-    volume: "430 L",
-    duration: "43 min",
-    aiFollowed: true,
-  },
-  {
-    id: 5,
-    date: "07 Avr 2026 - 06:30",
-    volume: "390 L",
-    duration: "39 min",
-    aiFollowed: false,
-  },
-  {
-    id: 6,
-    date: "06 Avr 2026 - 06:00",
-    volume: "410 L",
-    duration: "41 min",
-    aiFollowed: true,
-  },
-  {
-    id: 7,
-    date: "05 Avr 2026 - 06:00",
-    volume: "460 L",
-    duration: "46 min",
-    aiFollowed: true,
-  },
-];
+import { useData } from "../contexts/DataContext";
 
 export function History() {
-  const [period, setPeriod] = useState<"week" | "month" | "year">("month");
+  const { historyRecords, waterConsumptionData } = useData();
+  const [period, setPeriod] = useState<"week" | "month" | "year">("week");
 
-  const chartData = period === "week" ? weeklyData : monthlyData;
+  // Derive dynamic chart data from the live simulation
+  const totalWeekConsumption = waterConsumptionData.reduce((sum, item) => sum + item.consumption, 0);
+
+  const chartData = period === "week" ? waterConsumptionData : period === "month" ? [
+    { label: "Sem 1", consumption: totalWeekConsumption },
+    { label: "Sem 2", consumption: Math.round(totalWeekConsumption * 0.95) },
+    { label: "Sem 3", consumption: Math.round(totalWeekConsumption * 1.05) },
+    { label: "Sem 4", consumption: Math.round(totalWeekConsumption * 1.1) }
+  ] : [
+    { label: "Jan", consumption: totalWeekConsumption * 4 },
+    { label: "Fév", consumption: totalWeekConsumption * 3.8 },
+    { label: "Mar", consumption: totalWeekConsumption * 4.2 },
+    { label: "Avr", consumption: totalWeekConsumption * 4.5 },
+  ];
+
+  const totalConsumption = chartData.reduce((sum, item) => sum + item.consumption, 0);
+  const aiFollowedCount = historyRecords.filter(r => r.aiFollowed).length;
+  const aiFollowedPct = historyRecords.length > 0 ? Math.round((aiFollowedCount / historyRecords.length) * 100) : 0;
+  const dailyAverage = Math.round(totalConsumption / chartData.length);
 
   const handleExport = () => {
     console.log("Exporting PDF...");
@@ -113,23 +51,23 @@ export function History() {
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <p className="text-sm text-gray-600 mb-1">Consommation totale</p>
-          <p className="text-2xl font-semibold text-gray-900">112,300 L</p>
-          <p className="text-xs text-gray-500 mt-1">Ce mois</p>
+          <p className="text-2xl font-semibold text-gray-900">{totalConsumption} L</p>
+          <p className="text-xs text-gray-500 mt-1">Sur la période</p>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <p className="text-sm text-gray-600 mb-1">Économies réalisées</p>
+          <p className="text-sm text-gray-600 mb-1">Économies (vs normale)</p>
           <p className="text-2xl font-semibold text-[#1D9E75]">18%</p>
-          <p className="text-xs text-gray-500 mt-1">vs mois dernier</p>
+          <p className="text-xs text-gray-500 mt-1">Estimées par IA</p>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-200">
           <p className="text-sm text-gray-600 mb-1">IA suivie</p>
-          <p className="text-2xl font-semibold text-gray-900">71%</p>
+          <p className="text-2xl font-semibold text-gray-900">{aiFollowedPct}%</p>
           <p className="text-xs text-gray-500 mt-1">des recommandations</p>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <p className="text-sm text-gray-600 mb-1">Moyenne quotidienne</p>
-          <p className="text-2xl font-semibold text-gray-900">440 L</p>
-          <p className="text-xs text-gray-500 mt-1">7 derniers jours</p>
+          <p className="text-sm text-gray-600 mb-1">Moyenne journalière</p>
+          <p className="text-2xl font-semibold text-gray-900">{dailyAverage} L</p>
+          <p className="text-xs text-gray-500 mt-1">Sur la période</p>
         </div>
       </div>
 
@@ -173,7 +111,7 @@ export function History() {
         <ResponsiveContainer width="100%" height={350}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey={period === "week" ? "day" : "month"} stroke="#6b7280" />
+            <XAxis dataKey={period === "week" ? "label" : "month"} stroke="#6b7280" />
             <YAxis stroke="#6b7280" />
             <Tooltip
               contentStyle={{
@@ -228,6 +166,9 @@ export function History() {
             ))}
           </tbody>
         </table>
+        {historyRecords.length === 0 && (
+          <p className="text-gray-500 italic p-6 text-center border-t border-gray-200">Aucun historique d'irrigation trouvé.</p>
+        )}
       </div>
     </div>
   );

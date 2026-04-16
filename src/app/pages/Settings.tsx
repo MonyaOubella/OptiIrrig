@@ -1,6 +1,16 @@
-import { Settings as SettingsIcon, User, Bell, Shield, Database } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Shield, Database, RefreshCw } from "lucide-react";
+import { useData } from "../contexts/DataContext";
 
 export function Settings() {
+  const { resetSimulation } = useData();
+
+  const handleReset = () => {
+    if (window.confirm("Êtes-vous sûr de vouloir réinitialiser toutes les données de simulation ?")) {
+      resetSimulation();
+      alert("Données réinitialisées avec succès !");
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold text-gray-900">Paramètres</h1>
@@ -50,12 +60,21 @@ export function Settings() {
             <div className="p-3 bg-gray-600 rounded-lg">
               <Database className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Données</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Données & Simulation</h2>
           </div>
-          <p className="text-gray-600 mb-4">Gestion et exportation des données</p>
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
-            Gérer
-          </button>
+          <p className="text-gray-600 mb-4">Gestion des données locales et réinitialisation de la simulation.</p>
+          <div className="flex gap-3">
+            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+              Exporter CSV
+            </button>
+            <button 
+              onClick={handleReset}
+              className="px-4 py-2 flex items-center gap-2 bg-[#E24B4A] text-white rounded-lg font-medium hover:bg-[#d04342] transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reset Simulation
+            </button>
+          </div>
         </div>
       </div>
     </div>

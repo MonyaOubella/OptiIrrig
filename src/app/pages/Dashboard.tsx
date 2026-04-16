@@ -2,26 +2,12 @@ import { useEffect, useState } from "react";
 import { MetricCard } from "../components/MetricCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { Droplet, Activity, Gauge, Power, MapPin, Lightbulb, Clock } from "lucide-react";
+import { Droplet, Activity, Gauge, Power, MapPin, Lightbulb, Clock, Thermometer } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useMqtt } from "../contexts/MqttContext";
+import { useData } from "../contexts/DataContext";
 
 const AI_API_URL = import.meta.env.VITE_AI_API_URL ?? "http://127.0.0.1:8001";
-
-const waterConsumptionData = [
-  { day: "Lun", consumption: 320 },
-  { day: "Mar", consumption: 280 },
-  { day: "Mer", consumption: 350 },
-  { day: "Jeu", consumption: 290 },
-  { day: "Ven", consumption: 310 },
-  { day: "Sam", consumption: 270 },
-  { day: "Dim", consumption: 300 },
-];
-
-interface Action {
-  id: number;
-  action: string;
-  time: string;
-}
 
 interface AiRecommendation {
   irrigate: boolean;
@@ -32,23 +18,45 @@ interface AiRecommendation {
 }
 
 export function Dashboard() {
-  const [pumpActive, setPumpActive] = useState(true);
+  const { sensorData, pumpActive, togglePump } = useMqtt();
+  const { actions, waterConsumptionData, pumpStartTime } = useData();
+  const [activeDurationSec, setActiveDurationSec] = useState<number>(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<"open" | "close" | null>(null);
   const [aiRecommendation, setAiRecommendation] = useState<AiRecommendation | null>(null);
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [actions, setActions] = useState<Action[]>([
-    { id: 5, action: "Pompe fermée manuellement", time: "14:30" },
-    { id: 4, action: "Pompe ouverte (programmée)", time: "06:00" },
-    { id: 3, action: "Pompe fermée manuellement", time: "Hier 18:45" },
-    { id: 2, action: "Pompe ouverte (recommandation IA)", time: "Hier 06:15" },
-    { id: 1, action: "Pompe fermée automatiquement", time: "Avant-hier 19:00" },
-  ]);
-
   const handlePumpAction = (action: "open" | "close") => {
     setPendingAction(action);
     setShowConfirm(true);
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (pumpActive) {
+      // Use the cached start time if it exists, otherwise fall back to exactly now
+      const start = pumpStartTime.current || Date.now();
+      
+      // Eagerly calculate so the UI instantly updates without waiting 1000ms
+      setActiveDurationSec(Math.floor((Date.now() - start) / 1000));
+
+      interval = setInterval(() => {
+        const diffMs = Date.now() - start;
+        setActiveDurationSec(Math.floor(diffMs / 1000));
+      }, 1000); // Check every second
+    } else {
+      setActiveDurationSec(0); // Reset when off
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [pumpActive]);
+
+  const formatDuration = (totalSeconds: number) => {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    if (m === 0) return `${s}s`;
+    return `${m}m ${s}s`;
   };
 
   useEffect(() => {
@@ -100,23 +108,12 @@ export function Dashboard() {
 
   const confirmPumpAction = () => {
     if (pendingAction === "open") {
-      setPumpActive(true);
-      const newAction = {
-        id: actions.length + 1,
-        action: "Pompe ouverte manuellement",
-        time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-      };
-      setActions([newAction, ...actions.slice(0, 4)]);
+      togglePump("open");
     } else if (pendingAction === "close") {
-      setPumpActive(false);
-      const newAction = {
-        id: actions.length + 1,
-        action: "Pompe fermée manuellement",
-        time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-      };
-      setActions([newAction, ...actions.slice(0, 4)]);
+      togglePump("close");
     }
     setPendingAction(null);
+    setShowConfirm(false);
   };
 
   const roundedDuration = aiRecommendation ? Math.max(1, Math.round(aiRecommendation.recommended_duration_min)) : null;
@@ -128,22 +125,29 @@ export function Dashboard() {
       <h1 className="text-2xl font-semibold text-gray-900">Tableau de bord</h1>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         <MetricCard
           icon={Droplet}
           iconColor="bg-[#1D9E75]"
           label="Humidité du sol"
-          value="68"
+          value={sensorData.soilMoisture.toFixed(1)}
           unit="%"
+        />
+        <MetricCard
+          icon={Thermometer}
+          iconColor="bg-red-500"
+          label="Température"
+          value={sensorData.temperature.toFixed(1)}
+          unit="°C"
         />
         <MetricCard
           icon={Activity}
           iconColor="bg-[#185FA5]"
           label="Débit d'eau"
-          value="4.2"
+          value={pumpActive ? "4.2" : "0"}
           unit="L/min"
         />
-        <MetricCard icon={Gauge} iconColor="bg-orange-500" label="Pression" value="2.1" unit="bar" />
+        <MetricCard icon={Gauge} iconColor="bg-orange-500" label="Pression" value={sensorData.pressure.toString()} unit="bar" />
         <MetricCard
           icon={Power}
           iconColor="bg-[#1D9E75]"
@@ -159,7 +163,7 @@ export function Dashboard() {
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={waterConsumptionData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="day" stroke="#6b7280" />
+              <XAxis dataKey="label" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip
                 contentStyle={{
@@ -231,16 +235,16 @@ export function Dashboard() {
             </div>
 
             {/* Sensors */}
-            <div className="absolute top-12 left-16 flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md">
-              <MapPin className="w-4 h-4 text-[#1D9E75]" />
+            <div className={`absolute top-12 left-16 flex items-center gap-2 ${sensorData.soilMoisture < 40 ? "bg-[#E24B4A] text-white shadow-[#E24B4A] shadow-lg scale-105 transition-all" : "bg-white text-gray-900 shadow-md"} px-3 py-2 rounded-lg`}>
+              <MapPin className={`w-4 h-4 ${sensorData.soilMoisture < 40 ? "text-white" : "text-[#1D9E75]"}`} />
               <span className="text-sm font-medium">Capteur #1</span>
             </div>
             <div className="absolute top-32 right-20 flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md">
               <MapPin className="w-4 h-4 text-[#1D9E75]" />
               <span className="text-sm font-medium">Capteur #2</span>
             </div>
-            <div className="absolute bottom-16 left-32 flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md">
-              <MapPin className="w-4 h-4 text-[#1D9E75]" />
+            <div className={`absolute bottom-16 left-32 flex items-center gap-2 ${sensorData.soilMoisture < 40 ? "bg-[#E24B4A] text-white shadow-[#E24B4A] shadow-lg scale-105 transition-all" : "bg-white text-gray-900 shadow-md"} px-3 py-2 rounded-lg`}>
+              <MapPin className={`w-4 h-4 ${sensorData.soilMoisture < 40 ? "text-white" : "text-[#1D9E75]"}`} />
               <span className="text-sm font-medium">Capteur #3</span>
             </div>
             <div className="absolute bottom-20 right-24 flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md">
@@ -271,7 +275,7 @@ export function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Durée active</p>
-              <p className="text-xl font-semibold text-gray-900">{pumpActive ? "2h 15min" : "0min"}</p>
+              <p className="text-xl font-semibold text-gray-900">{pumpActive ? formatDuration(activeDurationSec) : "0s"}</p>
             </div>
           </div>
 
@@ -305,12 +309,16 @@ export function Dashboard() {
               <Clock className="w-4 h-4" />
               Dernières actions
             </h3>
-            <div className="space-y-2">
-              {actions.map((action) => (
-                <div key={action.id} className="text-xs text-gray-600">
-                  <span className="font-medium">{action.time}</span> - {action.action}
+            <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200">
+              {actions.slice(0, 15).map((action) => (
+                <div key={action.id} className="text-xs text-gray-600 border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                  <span className="font-medium bg-gray-100 px-2 py-1 rounded text-gray-700 mr-2">{action.time}</span>
+                  {action.action}
                 </div>
               ))}
+              {actions.length === 0 && (
+                <div className="text-xs text-gray-400 italic">Aucune action enregistrée</div>
+              )}
             </div>
           </div>
         </div>

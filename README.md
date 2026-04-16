@@ -129,8 +129,9 @@ Once running, the React application will subscribe to the MQTT broker topics, au
 | Name | Major Discipline | Core Responsibilities |
 | :--- | :--- | :--- |
 | **Monya OUBELLA** | Software Engineering | Global Architecture, UI/React Prototype, Context State |
-| **Soufiane TIDRARINI** | AI & Data Science | Predictive Model, Leak Detection Pipeline |
 | **Abdelouahd ID-BOUBRIK** | Embedded Systems | ESP32 Sensor Arrays, LoRaWAN / MQTT Comms |
+| **Soufiane TIDRARINI** | AI & Data Science | Predictive Model, Leak Detection Pipeline |
+
 
 ---
 <p align="center">
