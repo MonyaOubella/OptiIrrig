@@ -135,5 +135,5 @@ Once running, the React application will subscribe to the MQTT broker topics, au
 
 ---
 <p align="center">
-  <i>Developed with ❤️ for the Souss Massa agricultural ecosystem.</i>
+  <i>Developed with ❤️</i>
 </p>
