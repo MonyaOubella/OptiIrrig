@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MapPin, AlertTriangle, CheckCircle, WifiOff, Droplet } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
+import { useMqtt } from "../contexts/MqttContext";
 
 interface Farm {
   id: number;
@@ -79,21 +80,35 @@ const farmsData: Farm[] = [
 ];
 
 export function Cooperative() {
+  const { sensorData } = useMqtt();
   const [filter, setFilter] = useState<"all" | "alert" | "normal" | "offline">("all");
 
-  const filteredFarms = filter === "all" ? farmsData : farmsData.filter((f) => f.status === filter);
+  const dynamicFarmsData = farmsData.map((farm, index) => {
+    if (index === 0) {
+      const isDry = sensorData.soilMoisture < 40;
+      return {
+        ...farm,
+        status: isDry ? "alert" : farm.status,
+        liveMoisture: sensorData.soilMoisture,
+        liveTemperature: sensorData.temperature,
+      } as any;
+    }
+    return farm as any;
+  });
 
-  const totalConsumption = farmsData.reduce((sum, farm) => sum + farm.consumption, 0);
-  const activeAlerts = farmsData.reduce((sum, farm) => sum + farm.alerts, 0);
-  const connectedFarms = farmsData.filter((f) => f.status !== "offline").length;
+  const filteredFarms = filter === "all" ? dynamicFarmsData : dynamicFarmsData.filter((f: any) => f.status === filter);
 
-  const statusIcons = {
+  const totalConsumption = dynamicFarmsData.reduce((sum: number, farm: any) => sum + farm.consumption, 0);
+  const activeAlerts = dynamicFarmsData.reduce((sum: number, farm: any) => sum + farm.alerts, 0);
+  const connectedFarms = dynamicFarmsData.filter((f: any) => f.status !== "offline").length;
+
+  const statusIcons: any = {
     alert: AlertTriangle,
     normal: CheckCircle,
     offline: WifiOff,
   };
 
-  const statusColors = {
+  const statusColors: any = {
     alert: "text-[#E24B4A]",
     normal: "text-[#1D9E75]",
     offline: "text-gray-400",
@@ -138,7 +153,7 @@ export function Cooperative() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Exploitations connectées</p>
-              <p className="text-2xl font-semibold text-gray-900">{connectedFarms}/{farmsData.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{connectedFarms}/{dynamicFarmsData.length}</p>
               <p className="text-xs text-gray-500">En ligne</p>
             </div>
           </div>
@@ -235,7 +250,7 @@ export function Cooperative() {
               }`}
             >
               <span className="font-medium">Toutes</span>
-              <span className="text-sm">{farmsData.length}</span>
+              <span className="text-sm">{dynamicFarmsData.length}</span>
             </button>
             <button
               onClick={() => setFilter("alert")}
@@ -246,7 +261,7 @@ export function Cooperative() {
               }`}
             >
               <span className="font-medium">Alertes actives</span>
-              <span className="text-sm">{farmsData.filter((f) => f.status === "alert").length}</span>
+              <span className="text-sm">{dynamicFarmsData.filter((f: any) => f.status === "alert").length}</span>
             </button>
             <button
               onClick={() => setFilter("normal")}
@@ -257,7 +272,7 @@ export function Cooperative() {
               }`}
             >
               <span className="font-medium">Normal</span>
-              <span className="text-sm">{farmsData.filter((f) => f.status === "normal").length}</span>
+              <span className="text-sm">{dynamicFarmsData.filter((f: any) => f.status === "normal").length}</span>
             </button>
             <button
               onClick={() => setFilter("offline")}
@@ -268,7 +283,7 @@ export function Cooperative() {
               }`}
             >
               <span className="font-medium">Hors ligne</span>
-              <span className="text-sm">{farmsData.filter((f) => f.status === "offline").length}</span>
+              <span className="text-sm">{dynamicFarmsData.filter((f: any) => f.status === "offline").length}</span>
             </button>
           </div>
         </div>
@@ -290,12 +305,26 @@ export function Cooperative() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredFarms.map((farm) => (
+            {filteredFarms.map((farm: any) => (
               <tr key={farm.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4">
-                  <span className="font-semibold text-gray-900">{farm.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900">{farm.name}</span>
+                    {farm.liveMoisture !== undefined && farm.liveMoisture < 40 && (
+                      <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full border border-orange-200">
+                        Dry Soil
+                      </span>
+                    )}
+                  </div>
                 </td>
-                <td className="px-6 py-4 text-gray-700">{farm.owner}</td>
+                <td className="px-6 py-4">
+                  <span className="text-gray-700 block">{farm.owner}</span>
+                  {farm.liveMoisture !== undefined && (
+                    <span className="text-xs text-gray-500 mt-1 block">
+                      Live: {farm.liveTemperature?.toFixed(1)}°C | {farm.liveMoisture?.toFixed(1)}%💧
+                    </span>
+                  )}
+                </td>
                 <td className="px-6 py-4">
                   <StatusBadge
                     status={farm.status === "alert" ? "inactive" : farm.status === "offline" ? "warning" : "active"}

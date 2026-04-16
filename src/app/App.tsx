@@ -8,10 +8,12 @@ import { History } from "./pages/History";
 import { Report } from "./pages/Report";
 import { Cooperative } from "./pages/Cooperative";
 import { Settings } from "./pages/Settings";
+import { MqttProvider } from "./contexts/MqttContext";
 
 export default function App() {
   return (
     <BrowserRouter>
+      <MqttProvider>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route
@@ -72,6 +74,7 @@ export default function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </MqttProvider>
     </BrowserRouter>
   );
 }

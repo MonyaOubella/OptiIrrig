@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { MetricCard } from "../components/MetricCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { Droplet, Activity, Gauge, Power, MapPin, Lightbulb, Clock } from "lucide-react";
+import { Droplet, Activity, Gauge, Power, MapPin, Lightbulb, Clock, Thermometer } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useMqtt } from "../contexts/MqttContext";
 
 const AI_API_URL = import.meta.env.VITE_AI_API_URL ?? "http://127.0.0.1:8001";
 
@@ -32,7 +33,7 @@ interface AiRecommendation {
 }
 
 export function Dashboard() {
-  const [pumpActive, setPumpActive] = useState(true);
+  const { sensorData, pumpActive, togglePump } = useMqtt();
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<"open" | "close" | null>(null);
   const [aiRecommendation, setAiRecommendation] = useState<AiRecommendation | null>(null);
@@ -100,23 +101,24 @@ export function Dashboard() {
 
   const confirmPumpAction = () => {
     if (pendingAction === "open") {
-      setPumpActive(true);
+      togglePump("open");
       const newAction = {
         id: actions.length + 1,
-        action: "Pompe ouverte manuellement",
+        action: "Commande PUMP_ON envoyée",
         time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
       };
       setActions([newAction, ...actions.slice(0, 4)]);
     } else if (pendingAction === "close") {
-      setPumpActive(false);
+      togglePump("close");
       const newAction = {
         id: actions.length + 1,
-        action: "Pompe fermée manuellement",
+        action: "Commande PUMP_OFF envoyée",
         time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
       };
       setActions([newAction, ...actions.slice(0, 4)]);
     }
     setPendingAction(null);
+    setShowConfirm(false);
   };
 
   const roundedDuration = aiRecommendation ? Math.max(1, Math.round(aiRecommendation.recommended_duration_min)) : null;
@@ -133,17 +135,17 @@ export function Dashboard() {
           icon={Droplet}
           iconColor="bg-[#1D9E75]"
           label="Humidité du sol"
-          value="68"
+          value={sensorData.soilMoisture.toFixed(1)}
           unit="%"
         />
         <MetricCard
-          icon={Activity}
+          icon={Thermometer}
           iconColor="bg-[#185FA5]"
-          label="Débit d'eau"
-          value="4.2"
-          unit="L/min"
+          label="Température"
+          value={sensorData.temperature.toFixed(1)}
+          unit="°C"
         />
-        <MetricCard icon={Gauge} iconColor="bg-orange-500" label="Pression" value="2.1" unit="bar" />
+        <MetricCard icon={Gauge} iconColor="bg-orange-500" label="Pression" value={sensorData.pressure.toString()} unit="raw" />
         <MetricCard
           icon={Power}
           iconColor="bg-[#1D9E75]"

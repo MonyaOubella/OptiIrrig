@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "author": "Abdelouahed Id-boubrik",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-breadboard", "id": "bb1", "top": -60.6, "left": -189.2, "attrs": {} },
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 182.4, "left": 168.04, "attrs": {} },
+    { "type": "wokwi-led", "id": "led1", "top": 25.2, "left": 311, "attrs": { "color": "red" } },
+    {
+      "type": "wokwi-slide-potentiometer",
+      "id": "pot2",
+      "top": -187,
+      "left": 325.4,
+      "attrs": { "travelLength": "30" }
+    },
+    { "type": "wokwi-dht22", "id": "dht1", "top": -18.9, "left": 541.8, "attrs": {} },
+    { "type": "wokwi-relay-module", "id": "relay1", "top": 259.4, "left": 614.4, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:GND.2", "bb1:bn.50", "black", [ "v0", "h172.8" ] ],
+    [ "esp:3V3", "bb1:bp.50", "red", [ "h-47.85", "v-48", "h307.2", "v-37.5" ] ],
+    [ "bb1:53b.h", "esp:23", "green", [ "v0" ] ],
+    [ "bb1:bn.42", "bb1:52b.h", "black", [ "v0" ] ],
+    [ "pot2:SIG", "esp:34", "green", [ "h-259.2", "v373.6" ] ],
+    [ "dht1:SDA", "esp:4", "blue", [ "h0.1", "v230.4" ] ],
+    [ "relay1:IN", "esp:5", "orange", [] ],
+    [ "led1:A", "bb1:53b.g", "", [ "$bb" ] ],
+    [ "led1:C", "bb1:52b.g", "", [ "$bb" ] ],
+    [ "dht1:GND", "bb1:bn.48", "black", [ "v57.6", "h-191.2" ] ],
+    [ "relay1:VCC", "bb1:bp.46", "red", [ "h0" ] ],
+    [ "relay1:GND", "bb1:bn.49", "black", [ "h0" ] ],
+    [ "dht1:VCC", "bb1:bp.47", "red", [ "v76.8", "h-172.8" ] ],
+    [ "pot2:GND", "bb1:bn.45", "black", [ "v336", "h-186.8" ] ],
+    [ "pot2:VCC", "bb1:bp.40", "red", [ "h0" ] ]
+  ],
+  "dependencies": {}
+}
